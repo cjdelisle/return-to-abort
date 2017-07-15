@@ -3,15 +3,16 @@
 A small proof of concept using code introspection to make ROP exploitation
 really really suck.
 
+**NOTE:** This idea is not usable in practice, see issues below.
+
 ## Try it
 
-    # Yes really, it contains some bash and awk to "fix" the assembly.
-    bash ./safecall.c
+    make
+    ./demo
 
-If it doesn't implode, it works on your architecture (meaning it's i386/amd64)
+If it doesn't implode, it works on your architecture (meaning it's amd64)
 
-    bash ./safecall.c ./output
-    gdb ./output
+    gdb ./demo
     (gdb) disassemble main
     (gdb) disassemble test
     # check it out
@@ -47,38 +48,33 @@ uniqueness of the bytes, that means almost certainly these will be function call
 Therefor the attacker can make one function return to a function which does not call it but
 he cannot assemble individual pieces of assembly by returning to any place in the executable.
 
-## Further Research
+## Issues
 
-Before trying to get this included in GCC, some other things I'd like to do...
+Thanks to Zach Riggle ( @zachriggle ) for helping tear this idea apart.
+While the idea is technically safe, there are so many constraints on it's usage that it
+cannot reasonably be implemented.
 
-### Function Fingerprints
+### Function pointers are impossible
+In this implementation, the fingerprint of the function is it's hash, therefore taking
+a function pointer and calling it later would not be possible.
 
-To further limit the attacker's options for connecting functions not as they were intended,
-the second two bytes should be computed from the number of arguments and the sizes of each
-argument as well as that of the return value. Variadic functions should contain only their
-mandatory parameters plus an extra parameter which is of a unique size. While the caller and
-callee may not have exactly the same function declaration, we can reasonably expect them to
-be binary compatible.
+### Any unsafe call is an attack point
+The initial version of this project had a main() function safe-calling a test() function
+which was vulnerable. Unfortunately in this case the example was not safe because the
+attacker can overwrite many frames of the stack, not just one, so he could simply make the
+test() function return properly to main() function and then make the main function return
+to the attacker's place of choice.
 
-Should each function *begin* with it's fingerprint? This would allow them to be looked up in
-shared libraries.
+This was mitigated by making the example abort() rather than return. In order to put it
+in production libc _start() would need to use a safecall.
 
-### _safe_myFunction()
+#### Calling a "safe" function from an "unsafe" one is impossible
+One might consider that if there's a safe function, one can simply use a sort of
+trampoline function to call it from an unprotected function. Not so fast, if the
+trampoline exists in memory then the attacker can return to it and then setup the
+next return pointer to point to his code of choice. This seriously harms the usability
+of this kind of solution.
 
-In order to allow safecall to be used in shared libraries, functions will need to be
-duplicated so that old/unsafe code can still call them. Emitting an unsafe version of each
-function which calls it's safe counterpart will allow legacy code to continue working, albeit
-slower. Perhaps modify the linker to patch these stub functions into the GOT?
-
-### Verify performance
-
-Is this going to kill performance? Worse than -fstack-protector ?
-
-### Verify alignment
-
-We should make sure these 4 bytes are always 4 byte aligned. Are function returns always
-aligned? Can the compiler be made to emit only aligned calls? Is patching needed?
-
-### Other architectures
-
-How will this port to ARM, MIPS and others?
+### SafeStack has already solved the problem
+This solution, while interesting, is in almost no way, better than SafeStack which is
+implemented in clang: https://clang.llvm.org/docs/SafeStack.html
