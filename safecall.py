@@ -13,7 +13,7 @@ def main():
         lines.append(line)
         m = line.split()
         if len(m) > 0 and (m[0] == 'call' or m[0] == 'callq'):
-            if m[1] in [ '_printf', '___stack_chk_fail', '_execve', 'puts', '_read']:
+            if m[1] in [ '_printf', '___stack_chk_fail', '_execve', '_puts', '_read']:
                 leadingUnderscore = True
     for line in lines:
         m = line.split()
