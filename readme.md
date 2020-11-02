@@ -1,5 +1,7 @@
 # Safecall -- return to abort() attacks
 
+Status: unmaintained - this was an experiment, the underlying concepts have been industrialized in the form of [SafeStack](https://clang.llvm.org/docs/SafeStack.html).
+
 A small proof of concept using code introspection to make ROP exploitation
 really really suck.
 
